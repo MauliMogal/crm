@@ -1,27 +1,19 @@
 <template>
   <LayoutHeader>
     <template #left-header>
-      <ViewBreadcrumbs routeName="Calendar" />
+      <div class="flex items-center gap-1">
+        <Button
+          v-if="!isMobileView"
+          variant="ghost"
+          icon="lucide-panel-left"
+          :tooltip="showSidebar ? __('Hide sidebar') : __('Show sidebar')"
+          :aria-label="showSidebar ? __('Hide sidebar') : __('Show sidebar')"
+          @click="showSidebar = !showSidebar"
+        />
+        <ViewBreadcrumbs routeName="Calendar" />
+      </div>
     </template>
     <template #right-header>
-      <!-- your own live pages are one click away; the rest stay in settings -->
-      <Dropdown
-        v-if="myBookingPages.length"
-        align="end"
-        :options="bookingPageOptions"
-      >
-        <Button
-          :label="__('Booking pages')"
-          icon-left="lucide-calendar-plus"
-          icon-right="lucide-chevron-down"
-        />
-      </Dropdown>
-      <Button
-        v-else
-        :label="__('Booking pages')"
-        icon-left="lucide-calendar-plus"
-        @click="openBookingPages"
-      />
       <ShortcutTooltip :label="__('Create Event')" combo="Mod+E">
         <Button
           variant="solid"
@@ -37,6 +29,11 @@
     </template>
   </LayoutHeader>
   <div class="flex h-screen overflow-hidden">
+    <CalendarSidebar
+      v-if="showSidebar && !isMobileView"
+      :range="shownRange"
+      @goto="(date) => calendar?.setCalendarDate(date)"
+    />
     <Calendar
       ref="calendar"
       class="flex-1 overflow-hidden"
@@ -182,6 +179,7 @@
 </template>
 <script setup>
 import CalendarEventPanel from '@/components/Calendar/CalendarEventPanel.vue'
+import CalendarSidebar from '@/components/Calendar/CalendarSidebar.vue'
 import ViewBreadcrumbs from '@/components/ViewBreadcrumbs.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import ShortcutTooltip from '@/components/ShortcutTooltip.vue'
@@ -195,21 +193,19 @@ import {
   createListResource,
   dayjs,
   dayjsLocal,
-  createResource,
   DatePicker,
-  Dropdown,
   Tooltip,
   call,
   toast,
 } from 'frappe-ui'
-import { copyPageLink } from '@/components/Settings/BookingPages/bookingPages'
 import {
   Calendar,
   CalendarActiveEvent as activeEvent,
 } from 'frappe-ui/experimental'
 import { onMounted, ref, computed, provide, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { activeSettingsPage, showSettings } from '@/composables/settings'
+import { isMobileView } from '@/composables/settings'
+import { useStorage } from '@vueuse/core'
 import {
   EVENT_LIST_URL,
   endDateFor,
@@ -223,42 +219,10 @@ import {
 
 const { user } = sessionStore()
 
-function openBookingPages() {
-  activeSettingsPage.value = __('Booking Pages')
-  showSettings.value = true
-}
+// the month and your booking pages, beside the calendar; remembered per browser
+const showSidebar = useStorage('crm-calendar-sidebar', true)
+const shownRange = ref({})
 
-// the live pages you host, so you can copy your link without opening settings
-const bookingPages = createResource({
-  url: 'crm.api.booking.list_pages',
-  auto: true,
-})
-const myBookingPages = computed(() =>
-  (bookingPages.data || []).filter(
-    (page) => page.enabled && page.hosts?.includes(user),
-  ),
-)
-const bookingPageOptions = computed(() => [
-  {
-    group: __('Your booking pages'),
-    options: myBookingPages.value.map((page) => ({
-      label: page.title,
-      icon: 'lucide-link',
-      onClick: () => copyPageLink(page.route),
-    })),
-  },
-  {
-    group: '',
-    hideLabel: true,
-    options: [
-      {
-        label: __('Manage booking pages'),
-        icon: 'lucide-settings',
-        onClick: openBookingPages,
-      },
-    ],
-  },
-])
 const { $dialog } = globalStore()
 const { settings } = getSettings()
 const { users, getUser } = usersStore()
@@ -542,6 +506,7 @@ function syncEvent(eventID, _event) {
 
 async function handleRangeChange(range) {
   if (!range?.startDate || !range?.endDate) return
+  shownRange.value = { startDate: range.startDate, endDate: range.endDate }
   const key = `${range.view}-${range.startDate}-${range.endDate}`
   if (key === activeRangeKey.value) {
     if (events.list?.loading || events.list?.fetched) return

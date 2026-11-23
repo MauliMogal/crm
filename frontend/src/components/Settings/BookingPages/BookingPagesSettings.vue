@@ -7,8 +7,11 @@
 import { nextTick, ref } from 'vue'
 import BookingPagesList from './BookingPagesList.vue'
 import BookingPageEditor from './BookingPageEditor.vue'
+import { pageToOpen } from './bookingPages'
 
-const activeName = ref<string | null>(null)
+// opened from the calendar's sidebar: go straight to that page
+const activeName = ref<string | null>(pageToOpen.value)
+pageToOpen.value = null
 const listRef = ref<InstanceType<typeof BookingPagesList> | null>(null)
 
 function open(name: string) {

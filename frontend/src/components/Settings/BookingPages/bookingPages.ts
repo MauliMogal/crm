@@ -1,4 +1,5 @@
 import { copyToClipboard } from '@/utils'
+import { ref } from 'vue'
 
 export const ROUTE_PREFIX = '/crm-book/'
 
@@ -17,3 +18,6 @@ export function pageUrl(route: string): string {
 export function copyPageLink(route: string) {
   copyToClipboard(pageUrl(route))
 }
+
+// a page to open straight in the editor the next time Booking Pages settings opens
+export const pageToOpen = ref<string | null>(null)
