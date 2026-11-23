@@ -229,6 +229,37 @@ def list_pages() -> list[dict]:
 
 
 @frappe.whitelist()
+def page_summary(name: str) -> dict:
+	"""A page in brief, for the card the calendar's sidebar opens: when it's open, where
+	the meeting happens, what the form asks and who hosts."""
+	page = frappe.get_doc("CRM Booking Page", name)
+	page.check_permission("read")
+	form = booking_form(page)
+	fields = form.web_form_fields if form else []
+	hosts = page_hosts(page)
+	names = dict(
+		frappe.get_all("User", filters={"name": ["in", hosts]}, fields=["name", "full_name"], as_list=True)
+	)
+	return {
+		"name": page.name,
+		"title": page.title,
+		"route": page.route,
+		"enabled": page.enabled,
+		"duration": page.duration,
+		"document_type": page.document_type,
+		"location_type": page.location_type,
+		"location": page.location or "",
+		"description": page.description or "",
+		# the weekdays it's open, in the order the hours list them, each once
+		"days": list(dict.fromkeys(row.workday for row in page.availability)),
+		"form_fields": [
+			f.label for f in fields if f.label and f.fieldtype not in ("Section Break", "Column Break")
+		],
+		"hosts": [names.get(u) or u for u in hosts],
+	}
+
+
+@frappe.whitelist()
 def create_page(title: str, route: str, document_type: str = "CRM Lead") -> str:
 	"""A new page hosted by the current user, open 9 to 5 on weekdays, whose bookings
 	create a lead or a deal."""

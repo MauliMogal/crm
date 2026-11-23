@@ -9,6 +9,7 @@ from crm.api.booking import (
 	book,
 	cancel_booking,
 	get_slots,
+	page_summary,
 	reschedule_booking,
 	to_iso,
 	to_system,
@@ -260,6 +261,15 @@ class TestBooking(IntegrationTestCase):
 		form = frappe.get_doc("Web Form", self.page.web_form)
 		self.assertEqual(form.doc_type, "CRM Lead")
 		self.assertEqual(next(f.reqd for f in form.web_form_fields if f.fieldname == "email"), 1)
+
+	def test_page_summary_gives_the_card_what_it_shows(self):
+		self.add_fields()
+		frappe.set_user(HOSTS[0])
+		summary = page_summary(self.page.name)
+		self.assertEqual(summary["days"], ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+		self.assertIn("Company", summary["form_fields"])
+		self.assertEqual(summary["hosts"], ["Booking-Host-A"])
+		self.assertEqual(summary["duration"], 30)
 
 	def test_a_deal_page_creates_a_deal(self):
 		page = self.make_page([HOSTS[0]], document_type="CRM Deal")
