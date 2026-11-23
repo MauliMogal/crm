@@ -4,7 +4,20 @@
       <ViewBreadcrumbs routeName="Calendar" />
     </template>
     <template #right-header>
+      <!-- your own live pages are one click away; the rest stay in settings -->
+      <Dropdown
+        v-if="myBookingPages.length"
+        align="end"
+        :options="bookingPageOptions"
+      >
+        <Button
+          :label="__('Booking pages')"
+          icon-left="lucide-calendar-plus"
+          icon-right="lucide-chevron-down"
+        />
+      </Dropdown>
       <Button
+        v-else
         :label="__('Booking pages')"
         icon-left="lucide-calendar-plus"
         @click="openBookingPages"
@@ -182,11 +195,14 @@ import {
   createListResource,
   dayjs,
   dayjsLocal,
+  createResource,
   DatePicker,
+  Dropdown,
   Tooltip,
   call,
   toast,
 } from 'frappe-ui'
+import { copyPageLink } from '@/components/Settings/BookingPages/bookingPages'
 import {
   Calendar,
   CalendarActiveEvent as activeEvent,
@@ -211,6 +227,38 @@ function openBookingPages() {
   activeSettingsPage.value = __('Booking Pages')
   showSettings.value = true
 }
+
+// the live pages you host, so you can copy your link without opening settings
+const bookingPages = createResource({
+  url: 'crm.api.booking.list_pages',
+  auto: true,
+})
+const myBookingPages = computed(() =>
+  (bookingPages.data || []).filter(
+    (page) => page.enabled && page.hosts?.includes(user),
+  ),
+)
+const bookingPageOptions = computed(() => [
+  {
+    group: __('Your booking pages'),
+    options: myBookingPages.value.map((page) => ({
+      label: page.title,
+      icon: 'lucide-link',
+      onClick: () => copyPageLink(page.route),
+    })),
+  },
+  {
+    group: '',
+    hideLabel: true,
+    options: [
+      {
+        label: __('Manage booking pages'),
+        icon: 'lucide-settings',
+        onClick: openBookingPages,
+      },
+    ],
+  },
+])
 const { $dialog } = globalStore()
 const { settings } = getSettings()
 const { users, getUser } = usersStore()
