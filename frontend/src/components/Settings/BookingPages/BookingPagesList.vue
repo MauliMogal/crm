@@ -86,23 +86,15 @@
                   size="md"
                   :label="page.enabled ? __('Live') : __('Off')"
                 />
-                <div class="flex items-center gap-1">
-                  <Button
-                    icon="lucide-link"
-                    variant="ghost"
-                    :tooltip="__('Copy link')"
-                    @click="copyPageLink(page.route)"
-                  />
-                  <Dropdown
-                    align="end"
-                    :options="rowOptions(page)"
-                    @update:open="
-                      (open: boolean) => open && (isConfirmingDelete = false)
-                    "
-                  >
-                    <Button icon="lucide-more-horizontal" variant="ghost" />
-                  </Dropdown>
-                </div>
+                <Dropdown
+                  align="end"
+                  :options="rowOptions(page)"
+                  @update:open="
+                    (open: boolean) => open && (isConfirmingDelete = false)
+                  "
+                >
+                  <Button icon="lucide-more-horizontal" variant="ghost" />
+                </Dropdown>
               </div>
             </div>
             <hr v-if="section.pages.length !== i + 1" class="mx-2" />
